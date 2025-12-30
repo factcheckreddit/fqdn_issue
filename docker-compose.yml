@@ -1,0 +1,136 @@
+services:
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.email=you@example.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    networks:
+      - proxy
+
+  nginx_finanz_bund_de:
+    image: nginx:1.27-alpine
+    container_name: nginx_finanz_bund_de
+    volumes:
+      - ./nginx/finanz.bund.de.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./apps/finanz.bund.de:/var/www/html:ro
+    depends_on:
+      - php_finanz_bund_de
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.finanz_bund_de.rule=Host(`finanz.bund.de`)
+      - traefik.http.routers.finanz_bund_de.entrypoints=websecure
+      - traefik.http.routers.finanz_bund_de.tls=true
+      - traefik.http.routers.finanz_bund_de.tls.certresolver=le
+      - traefik.http.services.finanz_bund_de.loadbalancer.server.port=80
+    networks:
+      - proxy
+
+  php_finanz_bund_de:
+    image: php:8.3-fpm-alpine
+    container_name: php_finanz_bund_de
+    volumes:
+      - ./apps/finanz.bund.de:/var/www/html
+    networks:
+      - proxy
+
+  nginx_meldeamt_bund_de:
+    image: nginx:1.27-alpine
+    container_name: nginx_meldeamt_bund_de
+    volumes:
+      - ./nginx/meldeamt.bund.de.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./apps/meldeamt.bund.de:/var/www/html:ro
+    depends_on:
+      - php_meldeamt_bund_de
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.meldeamt_bund_de.rule=Host(`meldeamt.bund.de`)
+      - traefik.http.routers.meldeamt_bund_de.entrypoints=websecure
+      - traefik.http.routers.meldeamt_bund_de.tls=true
+      - traefik.http.routers.meldeamt_bund_de.tls.certresolver=le
+      - traefik.http.services.meldeamt_bund_de.loadbalancer.server.port=80
+    networks:
+      - proxy
+
+  php_meldeamt_bund_de:
+    image: php:8.3-fpm-alpine
+    container_name: php_meldeamt_bund_de
+    volumes:
+      - ./apps/meldeamt.bund.de:/var/www/html
+    networks:
+      - proxy
+
+  nginx_finanz_region_gv_at:
+    image: nginx:1.27-alpine
+    container_name: nginx_finanz_region_gv_at
+    volumes:
+      - ./nginx/finanz.region.gv.at.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./apps/finanz.region.gv.at:/var/www/html:ro
+    depends_on:
+      - php_finanz_region_gv_at
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.finanz_region_gv_at.rule=Host(`finanz.region.gv.at`)
+      - traefik.http.routers.finanz_region_gv_at.entrypoints=websecure
+      - traefik.http.routers.finanz_region_gv_at.tls=true
+      - traefik.http.routers.finanz_region_gv_at.tls.certresolver=le
+      - traefik.http.services.finanz_region_gv_at.loadbalancer.server.port=80
+    networks:
+      - proxy
+
+  php_finanz_region_gv_at:
+    image: php:8.3-fpm-alpine
+    container_name: php_finanz_region_gv_at
+    volumes:
+      - ./apps/finanz.region.gv.at:/var/www/html
+    networks:
+      - proxy
+
+  nginx_meldeamt_region_gv_at:
+    image: nginx:1.27-alpine
+    container_name: nginx_meldeamt_region_gv_at
+    volumes:
+      - ./nginx/meldeamt.region.gv.at.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./apps/meldeamt.region.gv.at:/var/www/html:ro
+    depends_on:
+      - php_meldeamt_region_gv_at
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.meldeamt_region_gv_at.rule=Host(`meldeamt.region.gv.at`)
+      - traefik.http.routers.meldeamt_region_gv_at.entrypoints=websecure
+      - traefik.http.routers.meldeamt_region_gv_at.tls=true
+      - traefik.http.routers.meldeamt_region_gv_at.tls.certresolver=le
+      - traefik.http.services.meldeamt_region_gv_at.loadbalancer.server.port=80
+    networks:
+      - proxy
+
+  php_meldeamt_region_gv_at:
+    image: php:8.3-fpm-alpine
+    container_name: php_meldeamt_region_gv_at
+    volumes:
+      - ./apps/meldeamt.region.gv.at:/var/www/html
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    name: proxy
+
+volumes:
+  traefik_letsencrypt:
+    name: traefik_letsencrypt
